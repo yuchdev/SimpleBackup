@@ -5,6 +5,7 @@ Simple Python script, which is able to find archivers available in the current s
 ## Examples
 
 Packing Documents directory in archive named doc.7z, located in the default backup directory:
+
 `python simple_backup.py --input-dir ~/Documents --output-archive doc.7z`
 
 
