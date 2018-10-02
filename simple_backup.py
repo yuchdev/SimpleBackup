@@ -46,25 +46,38 @@ class BackupApplication:
     TAR_BUNZIP2_COMMAND = "tar -jxvf {0}.tar.bz2 -C {1}"
     UNZIP_COMMAND = "unzip {0}.zip -d {1}"
 
+    ARCHIVE_INFO = {
+        "7z": {"exist": False, "pack": P7ZIP_COMMAND, "unpack": P7UNZIP_COMMAND},
+        "gzip": {"exist": False, "pack": TAR_GZIP_COMMAND, "unpack": TAR_GUNZIP_COMMAND},
+        "bz2": {"exist": False, "pack": TAR_BZIP2_COMMAND, "unpack": TAR_BUNZIP2_COMMAND},
+        "zip": {"exist": False, "pack": ZIP_COMMAND, "unpack": UNZIP_COMMAND},
+    }
+
+    @staticmethod
+    def __is_file(executable):
+        if not any([os.path.exists(os.path.join(p, executable)) for p in os.environ["PATH"].split(os.pathsep)]):
+            return False
+        return True
+
     @staticmethod
     def is_7z_exist():
-        return os.path.isfile("7z.exe") or os.path.isfile("7z")
+        return BackupApplication.__is_file("7z.exe") or BackupApplication.__is_file("7z")
 
     @staticmethod
     def is_zip_exist():
-        return os.path.isfile("zip.exe") or os.path.isfile("zip")
+        return BackupApplication.__is_file("zip.exe") or BackupApplication.__is_file("zip")
 
     @staticmethod
     def is_unzip_exist():
-        return os.path.isfile("unzip.exe") or os.path.isfile("unzip")
+        return BackupApplication.__is_file("unzip.exe") or BackupApplication.__is_file("unzip")
 
     @staticmethod
     def is_tar_bz2_exist():
-        return os.path.isfile("tar") and os.path.isfile("bzip2")
+        return BackupApplication.__is_file("tar") and BackupApplication.__is_file("bzip2")
 
     @staticmethod
     def is_tar_gzip_exist():
-        return os.path.isfile("tar") and os.path.isfile("gzip")
+        return BackupApplication.__is_file("tar") and BackupApplication.__is_file("gzip")
 
     @staticmethod
     def list_directory(target_directory):
@@ -78,24 +91,19 @@ class BackupApplication:
 
     @staticmethod
     def check_archives():
-        found = False
-        if BackupApplication.is_7z_exist():
-            found = True
-            logger.info("7zip found")
-        if BackupApplication.is_tar_bz2_exist():
-            found = True
-            logger.info("Tar with bzip2 found")
-        if BackupApplication.is_tar_gzip_exist():
-            found = True
-            logger.info("Tar with gzip found")
-        if BackupApplication.is_zip_exist():
-            found = True
-            logger.info("Zip found")
-        if BackupApplication.is_unzip_exist():
-            found = True
-            logger.info("Unzip found")
-        if not found:
-            logger.info("Nothing look like archive application found")
+        BackupApplication.ARCHIVE_INFO['7z']['exist'] = BackupApplication.is_7z_exist()
+        BackupApplication.ARCHIVE_INFO['gzip']['exist'] = BackupApplication.is_tar_gzip_exist()
+        BackupApplication.ARCHIVE_INFO['bz2']['exist'] = BackupApplication.is_tar_bz2_exist()
+        BackupApplication.ARCHIVE_INFO['zip']['exist'] = BackupApplication.is_zip_exist()
+        BackupApplication.ARCHIVE_INFO['zip']['exist'] = BackupApplication.is_unzip_exist()
+
+        if not any([item['exist'] for item in BackupApplication.ARCHIVE_INFO.values()]):
+            logger.info("Nothing looks like archive application found")
+        else:
+            for k, v in BackupApplication.ARCHIVE_INFO.items():
+                if v['exist']:
+                    logger.info("Archive application found: {0}".format(k))
+
 
 
 def main():
@@ -106,7 +114,6 @@ def main():
     # Set environment for Windows or POSIX
     download_default_dir = "Downloads"
     homepath = ""
-    archive_default_path = ""
 
     if len(homepath) and os.path.isdir(homepath):
         archive_default_path = os.path.join(homepath, download_default_dir)
@@ -127,6 +134,7 @@ def main():
                         help='Preferable archive application',
                         dest='archive',
                         default='7z',
+                        choices=BackupApplication.ARCHIVE_INFO.keys(),
                         required=False)
 
     parser.add_argument('--check',
