@@ -50,6 +50,8 @@ class BackupApplication:
     TAR_BUNZIP2_COMMAND = "tar -jxvf {0}.tar.bz2 -C {1}"
     UNZIP_COMMAND = "unzip {0}.zip -d {1}"
 
+    PREFERRED = "7z"
+
     ARCHIVE_INFO = {
         "7z": {"exist": False, "priority": 0, "pack": P7ZIP_COMMAND, "unpack": P7UNZIP_COMMAND},
         "gzip": {"exist": False, "priority": 1, "pack": TAR_GZIP_COMMAND, "unpack": TAR_GUNZIP_COMMAND},
@@ -140,6 +142,10 @@ class BackupApplication:
         return [item for item in os.listdir(target_directory) if item not in except_list]
 
     @staticmethod
+    def most_preferred():
+        items = [k for (k, v) in BackupApplication.ARCHIVE_INFO.items() if v['exist'] is True]
+
+    @staticmethod
     def pack(archive_name, files_list):
         """
         Actual packing procedure
@@ -147,7 +153,10 @@ class BackupApplication:
         :param files_list: List to backup
         :return: Archiver system return code
         """
-        pass
+        if BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['exist'] is True:
+            pack_command = BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['pack']
+        else:
+        return os.system(pack_command.format(archive_name, files_list))
 
     @staticmethod
     def unpack(archive_name, unpack_directory):
