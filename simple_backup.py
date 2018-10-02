@@ -143,7 +143,16 @@ class BackupApplication:
 
     @staticmethod
     def most_preferred():
-        items = [k for (k, v) in BackupApplication.ARCHIVE_INFO.items() if v['exist'] is True]
+        """
+        :return: Most preferred available archiver string (priority is {7zip, bzip2, gzip, zip})
+        """
+        priority = 100
+        preferred = ""
+        for k, v in BackupApplication.ARCHIVE_INFO.items():
+            if v['exist'] is True and v['priority'] < priority:
+                preferred = k
+                priority = v['priority'] 
+        return preferred
 
     @staticmethod
     def pack(archive_name, files_list):
@@ -156,6 +165,7 @@ class BackupApplication:
         if BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['exist'] is True:
             pack_command = BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['pack']
         else:
+            pack_command = BackupApplication.ARCHIVE_INFO[BackupApplication.most_preferred()]['pack']
         return os.system(pack_command.format(archive_name, files_list))
 
     @staticmethod
@@ -166,6 +176,7 @@ class BackupApplication:
         :param unpack_directory: Directory where to unpack
         :return: Archiver system return code
         """
+        # TODO: add unpacking
         pass
 
     @staticmethod
@@ -183,6 +194,7 @@ class BackupApplication:
 
         if not any([item['exist'] for item in BackupApplication.ARCHIVE_INFO.values()]):
             logger.info("Nothing looks like archive application found")
+            sys.exit(0)
         else:
             what_we_found = [k for (k, v) in BackupApplication.ARCHIVE_INFO.items() if v['exist'] is True]
             logger.info("Archive applications found: {0}".format(what_we_found))
@@ -198,7 +210,7 @@ def main():
                         help='Archive all directories except temporary',
                         dest='input_dir',
                         metavar='DIR',
-                        required=True)
+                        required=False)
 
     parser.add_argument('--output-archive',
                         help='Output archive file',
@@ -206,10 +218,11 @@ def main():
                         metavar='DIR',
                         required=False)
 
-    parser.add_argument('--archive-app',
+    parser.add_argument('--preferred-app',
                         help='Preferable archive application',
                         dest='archive',
                         default='7z',
+                        metavar='AR',
                         choices=BackupApplication.ARCHIVE_INFO.keys(),
                         required=False)
 
@@ -222,6 +235,8 @@ def main():
     args = parser.parse_args()
 
     BackupApplication.check_archives()
+    most_preferred = BackupApplication.most_preferred()
+    logger.info("Most preferred archiver is {0}".format(most_preferred))
 
     # Just checked which archivers are available
     if args.check:
