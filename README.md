@@ -10,7 +10,7 @@ Packing Documents directory in archive named doc.7z, located in the default back
 
 Packing Projects directory in archive named project.tar.bz2, located explicitly, prefer bz2 archiver:
 
-`python simple_backup.py --input-dir ~/Documents --output-archive /Volumes/backup/documents.tar.bz2 --preferred-app bz2` 
+`python simple_backup.py --input-dir ~/Projects --output-archive /Volumes/backup/project.tar.bz2 --preferred-app bz2` 
 
 
 
