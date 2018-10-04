@@ -186,6 +186,7 @@ class BackupApplication:
         tar.bz2 and tar.gz in POSIX systems only
         """
         BackupApplication.ARCHIVE_INFO['7z']['exist'] = BackupApplication.is_7z_exist()
+        # Be warned, this is not a copy-paste typo, for normal zip work zip and unzip should be available
         BackupApplication.ARCHIVE_INFO['zip']['exist'] = BackupApplication.is_zip_exist()
         BackupApplication.ARCHIVE_INFO['zip']['exist'] = BackupApplication.is_unzip_exist()
         if os.name == 'posix':
