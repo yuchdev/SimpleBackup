@@ -137,6 +137,7 @@ class BackupApplication:
                        "Thumbs.db",
                        ".DS_Store",
                        ".Spotlight-V100",
+                       ".fseventsd",
                        ".Trashes",
                        "System Volume Information"]
         return [item for item in os.listdir(target_directory) if item not in except_list]
