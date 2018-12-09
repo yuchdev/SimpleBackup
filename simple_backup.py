@@ -53,10 +53,33 @@ class BackupApplication:
     PREFERRED = "7z"
 
     ARCHIVE_INFO = {
-        "7z": {"exist": False, "priority": 0, "pack": P7ZIP_COMMAND, "unpack": P7UNZIP_COMMAND, "ext": "7z"},
-        "gzip": {"exist": False, "priority": 1, "pack": TAR_GZIP_COMMAND, "unpack": TAR_GUNZIP_COMMAND, "ext": "tar.gz"},
-        "bz2": {"exist": False, "priority": 2, "pack": TAR_BZIP2_COMMAND, "unpack": TAR_BUNZIP2_COMMAND, "ext": "tar.bz2"},
-        "zip": {"exist": False, "priority": 3, "pack": ZIP_COMMAND, "unpack": UNZIP_COMMAND, "ext": "zip"},
+        "7z": {
+            "exist": False, 
+            "priority": 0, 
+            "pack": P7ZIP_COMMAND, 
+            "unpack": P7UNZIP_COMMAND, 
+            "ext": "7z"},
+
+        "gzip": {
+            "exist": False, 
+            "priority": 1, 
+            "pack": TAR_GZIP_COMMAND, 
+            "unpack": TAR_GUNZIP_COMMAND, 
+            "ext": "tar.gz"},
+
+        "bz2": {
+            "exist": False, 
+            "priority": 2, 
+            "pack": TAR_BZIP2_COMMAND, 
+            "unpack": TAR_BUNZIP2_COMMAND, 
+            "ext": "tar.bz2"},
+
+        "zip": {
+            "exist": False, 
+            "priority": 3, 
+            "pack": ZIP_COMMAND, 
+            "unpack": UNZIP_COMMAND, 
+            "ext": "zip"}
     }
 
     @staticmethod
@@ -171,17 +194,6 @@ class BackupApplication:
         return os.system(pack_command.format(output_archive, dir_to_backup))
 
     @staticmethod
-    def unpack(archive_name, unpack_directory):
-        """
-        Unpacking procedure
-        :param archive_name: Archive name to unpack
-        :param unpack_directory: Directory where to unpack
-        :return: Archiver system return code
-        """
-        # TODO: add unpacking
-        pass
-
-    @staticmethod
     def check_archives():
         """
         Check which archives present in the system. 7zip and zip supported everywhere,
@@ -235,20 +247,12 @@ def main():
                         choices=BackupApplication.ARCHIVE_INFO.keys(),
                         required=False)
 
-    parser.add_argument('--check',
-                        help='Check available archive applications',
-                        action='store_false',
-                        required=False)
-
     parser.add_argument('--rewrite',
                         help='Rewrite existing backup file if exist',
-                        action='store_false',
+                        action='store_true',
                         required=False)
 
     args = parser.parse_args()
-
-    logger.debug("Check: {0}".format(args.check))
-    logger.debug("Rewrite: {0}".format(args.rewrite))
 
     BackupApplication.check_archives()
     most_preferred = BackupApplication.most_preferred()
@@ -259,10 +263,6 @@ def main():
         logger.info("Explicitly set {0} as archiver".format(args.archive_app))
     else:
         logger.info("You request {0} as archiver, but it does not exist. {1} is used".format(args.archive_app, most_preferred))
-
-    # Just checked which archivers are available
-    if args.check:
-        return 0
 
     # Set environment for Windows or POSIX
     download_default_dir = BackupApplication.get_download_dir()
@@ -308,9 +308,12 @@ def main():
     logger.info("Full archive path: '{0}'".format(output_archive_path))
 
     # Directory name provided with the archive name, but we do not overwrite existing archives
-    if os.path.isfile(os.path.basename(output_archive_path)):
+    if os.path.isfile(os.path.basename(output_archive_path)) and not args.rewrite:
         logger.warning("File '{0}' already exist".format(output_archive_path))
         return 0
+    elif os.path.isfile(os.path.basename(output_archive_path)) and args.rewrite:
+        logger.warning("File '{0}' already exist, rewrite flag set".format(output_archive_path))
+        os.remove(output_archive_path)
 
     files_list = BackupApplication.list_directory(input_dir)
 
@@ -318,14 +321,14 @@ def main():
         logger.warning("Source directory '{0}' is empty".format(files_list))
         return 0
     else:
-        logger.info("Backup files: '{0}'".format(files_list))
+        logger.info("Backup files: {0}".format(files_list))
 
     ret = BackupApplication.pack(output_archive_path, input_dir)
 
     if ret == 0:
         logger.info("Backup complete!")
     else:
-        logger.info("Something wrong during backup")
+        logger.info("Something wrong happened")
     return ret
 
 
