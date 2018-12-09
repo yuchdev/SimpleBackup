@@ -320,11 +320,13 @@ def main():
     else:
         logger.info("Backup files: '{0}'".format(files_list))
 
-    # TODO: backup here
-    BackupApplication.pack(output_archive_path, input_dir)
+    ret = BackupApplication.pack(output_archive_path, input_dir)
 
-    logger.info("Backup complete!")
-    return 0
+    if ret == 0:
+        logger.info("Backup complete!")
+    else:
+        logger.info("Something wrong during backup")
+    return ret
 
 
 ###########################################################################
