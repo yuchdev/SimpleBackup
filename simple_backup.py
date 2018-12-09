@@ -264,7 +264,6 @@ def main():
     if args.check:
         return 0
 
-
     # Set environment for Windows or POSIX
     download_default_dir = BackupApplication.get_download_dir()
     
