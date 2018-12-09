@@ -41,22 +41,22 @@ class BackupApplication:
     """
 
     P7ZIP_COMMAND = "7z a -y {0} {1}"
-    TAR_GZIP_COMMAND = "tar -zcvf {0}.tar.gz {1}"
-    TAR_BZIP2_COMMAND = "tar -jcvf {0}.tar.bz2 {1}"
-    ZIP_COMMAND = "zip -r -9 {0}.zip {1}"
+    TAR_GZIP_COMMAND = "tar -zcvf {0} {1}"
+    TAR_BZIP2_COMMAND = "tar -jcvf {0} {1}"
+    ZIP_COMMAND = "zip -r -9 {0} {1}"
 
     P7UNZIP_COMMAND = "7z x -y {0} -o{1} -r"
-    TAR_GUNZIP_COMMAND = "tar -zxvf {0}.tar.gz -C {1}"
-    TAR_BUNZIP2_COMMAND = "tar -jxvf {0}.tar.bz2 -C {1}"
-    UNZIP_COMMAND = "unzip {0}.zip -d {1}"
+    TAR_GUNZIP_COMMAND = "tar -zxvf {0} -C {1}"
+    TAR_BUNZIP2_COMMAND = "tar -jxvf {0} -C {1}"
+    UNZIP_COMMAND = "unzip {0} -d {1}"
 
     PREFERRED = "7z"
 
     ARCHIVE_INFO = {
-        "7z": {"exist": False, "priority": 0, "pack": P7ZIP_COMMAND, "unpack": P7UNZIP_COMMAND},
-        "gzip": {"exist": False, "priority": 1, "pack": TAR_GZIP_COMMAND, "unpack": TAR_GUNZIP_COMMAND},
-        "bz2": {"exist": False, "priority": 2, "pack": TAR_BZIP2_COMMAND, "unpack": TAR_BUNZIP2_COMMAND},
-        "zip": {"exist": False, "priority": 3, "pack": ZIP_COMMAND, "unpack": UNZIP_COMMAND},
+        "7z": {"exist": False, "priority": 0, "pack": P7ZIP_COMMAND, "unpack": P7UNZIP_COMMAND, "ext": "7z"},
+        "gzip": {"exist": False, "priority": 1, "pack": TAR_GZIP_COMMAND, "unpack": TAR_GUNZIP_COMMAND, "ext": "tar.gz"},
+        "bz2": {"exist": False, "priority": 2, "pack": TAR_BZIP2_COMMAND, "unpack": TAR_BUNZIP2_COMMAND, "ext": "tar.bz2"},
+        "zip": {"exist": False, "priority": 3, "pack": ZIP_COMMAND, "unpack": UNZIP_COMMAND, "ext": "zip"},
     }
 
     @staticmethod
@@ -156,18 +156,19 @@ class BackupApplication:
         return preferred
 
     @staticmethod
-    def pack(archive_name, files_list):
+    def pack(output_archive, dir_to_backup):
         """
         Actual packing procedure
-        :param archive_name: Archive name (if extension is not provided it would be added)
-        :param files_list: List to backup
+        :param dir_to_backup: Existing directory to backup
+        :param output_archive: Archive full path with file name 
         :return: Archiver system return code
         """
         if BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['exist'] is True:
             pack_command = BackupApplication.ARCHIVE_INFO[BackupApplication.PREFERRED]['pack']
         else:
             pack_command = BackupApplication.ARCHIVE_INFO[BackupApplication.most_preferred()]['pack']
-        return os.system(pack_command.format(archive_name, files_list))
+        logger.info("Start backup process. patience...")
+        return os.system(pack_command.format(output_archive, dir_to_backup))
 
     @staticmethod
     def unpack(archive_name, unpack_directory):
@@ -212,17 +213,23 @@ def main():
                         help='Archive all directories except temporary',
                         dest='input_dir',
                         metavar='DIR',
-                        required=False)
+                        required=True)
 
-    parser.add_argument('--output-archive',
-                        help='Output archive file',
-                        dest='output_archive',
+    parser.add_argument('--output-dir',
+                        help='Output archive directory',
+                        dest='output_dir',
                         metavar='DIR',
                         required=False)
 
-    parser.add_argument('--preferred-app',
+    parser.add_argument('--archive-name',
+                        help='Output archive name, same as backup directory by default',
+                        dest='archive_name',
+                        default = "",
+                        required=False)
+
+    parser.add_argument('--archive-app',
                         help='Preferable archive application',
-                        dest='archive',
+                        dest='archive_app',
                         default='7z',
                         metavar='AR',
                         choices=BackupApplication.ARCHIVE_INFO.keys(),
@@ -230,62 +237,94 @@ def main():
 
     parser.add_argument('--check',
                         help='Check available archive applications',
-                        action='store_true',
-                        default=False,
+                        action='store_false',
+                        required=False)
+
+    parser.add_argument('--rewrite',
+                        help='Rewrite existing backup file if exist',
+                        action='store_false',
                         required=False)
 
     args = parser.parse_args()
+
+    logger.debug("Check: {0}".format(args.check))
+    logger.debug("Rewrite: {0}".format(args.rewrite))
 
     BackupApplication.check_archives()
     most_preferred = BackupApplication.most_preferred()
     logger.info("Most preferred archiver is {0}".format(most_preferred))
 
+    if BackupApplication.ARCHIVE_INFO[args.archive_app]['exist']:
+        most_preferred = args.archive_app
+        logger.info("Explicitly set {0} as archiver".format(args.archive_app))
+    else:
+        logger.info("You request {0} as archiver, but it does not exist. {1} is used".format(args.archive_app, most_preferred))
+
     # Just checked which archivers are available
     if args.check:
         return 0
 
+
     # Set environment for Windows or POSIX
     download_default_dir = BackupApplication.get_download_dir()
-
+    
+    # Input dir is requitred, output is Download by default
     input_dir = args.input_dir
-    output_archive = args.output_archive
+    output_dir = download_default_dir
+
+    if args.output_dir != "":
+        output_dir = args.output_dir
 
     # Input (backup source dir) check
     if os.path.exists(input_dir):
         input_dir = os.path.abspath(input_dir)
 
     if not os.path.isdir(input_dir):
-        logger.warning("Source directory '{0}' does not exist")
+        logger.warning("Source directory '{0}' does not exist".format(input_dir))
         return 0
 
     logger.info("Backup directory '{0}'".format(input_dir))
 
-    # Directory name provided instead of archive name
-    if os.path.isdir(output_archive):
-        logger.warning("Output archive path is a directory: '{0}' Provide archive name".format(output_archive))
-        return 0
-    # Directory name provided with the archive name, but we do not overwrite existing archives
-    elif os.path.isdir(os.path.dirname(output_archive)) and os.path.isfile(os.path.basename(output_archive)):
-        logger.warning("File '{0}' already exist".format(output_archive))
-        return 0
-    # Directory name provided with the archive name, which is not exist
-    elif os.path.isdir(os.path.dirname(output_archive)) and not os.path.exists(os.path.basename(output_archive)):
-        logger.info("Try to archive '{0}'".format(output_archive))
-    # Only archive name provided, use Downloads directory by default
-    else:
-        output_archive = os.path.join(download_default_dir, output_archive)
-        logger.info("Try to archive to the default position '{0}'".format(output_archive))
+    # Input (backup source dir) check
+    if os.path.exists(output_dir):
+        output_dir = os.path.abspath(output_dir)
 
-    output_archive = os.path.abspath(output_archive)
-    logger.info("Full archive path '{0}'".format(output_archive))
+    # Directory name provided instead of archive name
+    if not os.path.isdir(output_dir):
+        logger.warning("Output archive path is not a directory: '{0}' Provide directory name".format(output_dir))
+        return 0
+
+    logger.info("Output directory '{0}'".format(output_dir))
+
+    if args.archive_name:
+        archive_name = args.archive_name
+    else:
+        archive_name = os.path.basename(input_dir)
+    archive_filename = "{0}.{1}".format(archive_name, BackupApplication.ARCHIVE_INFO[args.archive_app]['ext'])
+    
+    logger.info("Archive filename: '{0}'".format(archive_filename))
+    
+    output_archive_path = os.path.join(output_dir, archive_filename)
+
+    logger.info("Full archive path: '{0}'".format(output_archive_path))
+
+    # Directory name provided with the archive name, but we do not overwrite existing archives
+    if os.path.isfile(os.path.basename(output_archive_path)):
+        logger.warning("File '{0}' already exist".format(output_archive_path))
+        return 0
 
     files_list = BackupApplication.list_directory(input_dir)
+
     if 0 == len(files_list):
         logger.warning("Source directory '{0}' is empty".format(files_list))
         return 0
     else:
         logger.info("Backup files: '{0}'".format(files_list))
 
+    # TODO: backup here
+    BackupApplication.pack(output_archive_path, input_dir)
+
+    logger.info("Backup complete!")
     return 0
 
 
