@@ -6,11 +6,11 @@ Simple Python script, which is able to find archivers available in the current s
 
 Packing Documents directory in archive named doc.7z, located in the default backup directory:
 
-`simple_backup.py --input-dir ~/Documents --archive-name doc 
+`simple_backup.py --input-dir ~/Documents --archive-name doc`
 
 Packing Projects directory in archive named Project.tar.bz2, located explicitly, prefer bz2 archiver:
 
-`simple_backup.py --input-dir ~/Projects --output-dir /Volumes/backup/ --preferred-app bz2` 
+`simple_backup.py --input-dir ~/Projects --output-dir /Volumes/backup/ --preferred-app bz2`
 
 
 
