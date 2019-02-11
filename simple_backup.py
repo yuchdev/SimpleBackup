@@ -40,11 +40,13 @@ class BackupApplication:
     Simple archive-based backup class. Able to find installed archivers and pack multiple files to backup archive
     """
 
+    # 1st param is archive file, 2nd is packed directory path
     P7ZIP_COMMAND = "7z a -y {0} {1}"
     TAR_GZIP_COMMAND = "tar -zcvf {0} {1}"
     TAR_BZIP2_COMMAND = "tar -jcvf {0} {1}"
     ZIP_COMMAND = "zip -r -9 {0} {1}"
 
+    # 1st param is archive file, 2nd is unpack path
     P7UNZIP_COMMAND = "7z x -y {0} -o{1} -r"
     TAR_GUNZIP_COMMAND = "tar -zxvf {0} -C {1}"
     TAR_BUNZIP2_COMMAND = "tar -jxvf {0} -C {1}"
